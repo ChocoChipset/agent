@@ -198,9 +198,13 @@ public class Agent {
   }
   
   public func send(data: AnyObject) -> Agent {
-    var error: NSError?
-    let json = NSJSONSerialization.dataWithJSONObject(data, options: nil, error: &error)
-    return self.data(json, mime: "application/json")
+    do {
+      let json = try NSJSONSerialization.dataWithJSONObject(data, options: [])
+      return self.data(json, mime: "application/json")
+    } catch let error {
+      print("error while extracting data from JSON: \(error)");
+      return self.data(nil, mime: "application/json")
+    }
   }
 
   public func set(header: String, value: String) -> Agent {
@@ -209,15 +213,18 @@ public class Agent {
   }
 
   public func end(done: Response) -> Agent {
-    let completion = { (response: NSURLResponse!, data: NSData!, error: NSError!) -> Void in
+    let completion = { (response: NSURLResponse?, data: NSData?, error: NSError?) -> Void in
       if error != .None {
         done(.None, data, error)
         return
       }
-      var error: NSError?
       var json: AnyObject!
       if data != .None {
-        json = NSJSONSerialization.JSONObjectWithData(data, options: nil, error: &error)
+        do {
+          json = try NSJSONSerialization.JSONObjectWithData(data!, options: [])
+        } catch let error {
+          print("error while extracting data from JSON: \(error)");
+        }
       }
       let res = response as! NSHTTPURLResponse
       done(res, json, error)
@@ -227,7 +234,7 @@ public class Agent {
   }
   
   public func raw(done: RawResponse) -> Agent {
-    let completion = { (response: NSURLResponse!, data: NSData!, error: NSError!) -> Void in
+    let completion = { (response: NSURLResponse?, data: NSData?, error: NSError?) -> Void in
       if error != .None {
         done(.None, data, error)
         return
